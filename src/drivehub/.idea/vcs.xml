@@ -2,7 +2,10 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../.." vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../../ros-bridge" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../ros-bridge" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../ros-bridge/carla_msgs" vcs="Git" />
     <mapping directory="$USER_HOME$/carla-ros-bridge/ros-bridge" vcs="Git" />
   </component>
 </project>
