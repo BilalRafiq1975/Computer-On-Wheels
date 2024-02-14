@@ -16,7 +16,6 @@ def world_info_callback(world_info):
     opendrive_xml = world_info.opendrive
 
     rospy.loginfo("Received map name: %s", map_name)
-    # rospy.loginfo("Received OpenDRIVE XML:\n%s", opendrive_xml)
 
     # Parse the OpenDRIVE XML and store the data
     opendrive_data = parse_opendrive(opendrive_xml)
@@ -41,13 +40,16 @@ def parse_opendrive(opendrive_xml):
                 rospy.loginfo(f"Road Name: {road_name}")
                 rospy.loginfo(f"Start Coordinates: {start_coord}")
                 rospy.loginfo(f"End Coordinates: {end_coord}")
+
+                # Count lanes for the road
+                lane_count = count_lanes(road)
+                rospy.loginfo(f"Number of lanes: {lane_count}")
                 rospy.loginfo("\n")
 
         return {'road_count': road_count}  # Return dictionary with road count
     except Exception as e:
         rospy.logerr("Error parsing OpenDRIVE XML: %s", str(e))
         return None
-
 
 
 def get_start_and_end_coordinates(road_element):
@@ -64,6 +66,22 @@ def get_start_and_end_coordinates(road_element):
     return (start_x, start_y), (end_x, end_y)
 
 
+def count_lanes(road_element):
+    total_lanes = 0
+    try:
+        lane_sections = road_element.findall("./lanes/laneSection")
+        for lane_section in lane_sections:
+            left_lanes = lane_section.findall("./left/lane")
+            center_lanes = lane_section.findall("./center/lane")
+            right_lanes = lane_section.findall("./right/lane")
+            total_lanes += len(left_lanes) + len(center_lanes) + len(right_lanes)
+        return total_lanes
+    except Exception as e:
+        rospy.logerr("Error counting lanes: %s", str(e))
+        return 0
+
+
+
 def count_roads_and_lanes(opendrive_data):
     total_roads = 0
     total_lanes = 0
@@ -74,12 +92,7 @@ def count_roads_and_lanes(opendrive_data):
         total_roads = len(roads)
         # Count the number of lanes in each road
         for road in roads:
-            lane_sections = road.findall("./lanes/laneSection")
-            for lane_section in lane_sections:
-                left_lanes = lane_section.findall("./left/lane")
-                center_lanes = lane_section.findall("./center/lane")
-                right_lanes = lane_section.findall("./right/lane")
-                total_lanes += len(left_lanes) + len(center_lanes) + len(right_lanes)
+            total_lanes += count_lanes(road)
         return total_roads, total_lanes
     except Exception as e:
         rospy.logerr("Error counting roads and lanes: %s", str(e))
