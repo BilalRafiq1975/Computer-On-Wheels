@@ -1,0 +1,8 @@
+prefix=/home/maanz-ai/ahmed-workspace/install
+
+Name: carla_twist_to_control
+Description: Description of carla_twist_to_control
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: rospy
