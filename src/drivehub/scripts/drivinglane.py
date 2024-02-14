@@ -16,6 +16,7 @@ def world_info_callback(world_info):
     opendrive_xml = world_info.opendrive
 
     rospy.loginfo("Received map name: %s", map_name)
+    print("\n")
 
     # Parse the OpenDRIVE XML and store the data
     opendrive_data = parse_opendrive(opendrive_xml)
@@ -30,13 +31,14 @@ def parse_opendrive(opendrive_xml):
         road_elements = root.findall('.//road')
         road_count = len(road_elements)
 
-        rospy.loginfo("Total roads in OpenDRIVE map: %d" % road_count)
+        #rospy.loginfo("Total roads in OpenDRIVE map: %d" % road_count)
 
         # Extract start and end coordinates for each road
         for road in road_elements:
             road_name = road.get('name')
             start_coord, end_coord = get_start_and_end_coordinates(road)
             if start_coord and end_coord:
+                print("------------------------------------------------------------------------")
                 rospy.loginfo(f"Road Name: {road_name}")
                 rospy.loginfo(f"Start Coordinates: {start_coord}")
                 rospy.loginfo(f"End Coordinates: {end_coord}")
