@@ -27,7 +27,7 @@ if __name__ == '__main__':
     rospy.init_node('carla_spawn_vehicle', anonymous=True, log_level=rospy.DEBUG)
 
     # Example spawn point (adjust as needed)
-    spawn_point = Vector3(x=-110, y=-91.44, z=10.0)
+    spawn_point = Vector3(x=-65.90, y=61.191028093181394, z=10.0)
     spawn_rotation = Quaternion(0, 0, 0, 0)
 
     # Example actor type (adjust as needed)
