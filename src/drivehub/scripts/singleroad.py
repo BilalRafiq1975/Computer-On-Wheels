@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import math
 
 # Define constants
-ROAD_NAME = "Road 763"
+ROAD_NAME = "Road 4"
 LANE_TYPE = "driving"
 
 
@@ -50,7 +50,7 @@ def extract_segments(opendrive_xml, target_road_name, target_lane_type):
                 width = float(lane.find('width').get('a', 0))
                 rospy.loginfo(f"Lane width: {width}")
                 # Extract the geometry data
-                for geometry in lane.findall('../../planView/geometry'):
+                for geometry in target_road.findall("./planView/geometry"):
                     s = float(geometry.get('s', 0))
                     x = float(geometry.get('x', 0))
                     y = float(geometry.get('y', 0))
