@@ -7,6 +7,8 @@ import math
 ROAD_NAME = "Road 4"
 LANE_TYPE = "driving"
 
+# Define a threshold for considering a segment as straight or curved
+CURVE_THRESHOLD = 0.1  # Adjust this value based on the curvature tolerance
 
 def world_info_callback(world_info):
     map_name = world_info.map_name
@@ -17,11 +19,15 @@ def world_info_callback(world_info):
     # Parse the OpenDRIVE XML and extract lane information for the specified road
     segments = extract_segments(opendrive_xml, ROAD_NAME, LANE_TYPE)
     if segments:
+        print("-------------------------------------------------------------------------")
         rospy.loginfo(f"Segments on {ROAD_NAME}:")
         for segment_id, segment_data in segments.items():
             rospy.loginfo(f"Segment {segment_id}:")
             rospy.loginfo(f"S: {segment_data['s']}")
-            rospy.loginfo(f"Corners: {segment_data['corners']}")
+            if segment_data['shape'] == 'straight':
+                rospy.loginfo(f"Corners (Rectangle): {segment_data['corners']}")
+            else:
+                rospy.loginfo(f"Center (Circle): {segment_data['center']}, Radius: {segment_data['radius']}")
 
 
 def extract_segments(opendrive_xml, target_road_name, target_lane_type):
@@ -48,21 +54,28 @@ def extract_segments(opendrive_xml, target_road_name, target_lane_type):
             if lane_type == target_lane_type:
                 rospy.loginfo(f"Found lane {lane_id} of type {lane_type}")
                 width = float(lane.find('width').get('a', 0))
-                rospy.loginfo(f"Lane width: {width}")
+                
                 # Extract the geometry data
                 for geometry in target_road.findall("./planView/geometry"):
                     s = float(geometry.get('s', 0))
                     x = float(geometry.get('x', 0))
                     y = float(geometry.get('y', 0))
                     hdg = math.radians(float(geometry.get('hdg', 0)))  # Convert hdg to radians
-                    rospy.loginfo(f"Geometry data: s={s}, x={x}, y={y}, hdg={math.degrees(hdg)}")
 
-                    # Calculate corners of the rectangle
-                    corners = calculate_rectangle_corners(x, y, hdg, width)
-                    rospy.loginfo(f"Corners: {corners}")
+                    # Check if the segment is straight or curved based on the geometry type
+                    geometry_type = geometry.find('line')
+                    if geometry_type is not None:
+                        # Straight segment
+                        corners = calculate_rectangle_corners(x, y, hdg, width)
+                        shape_data = {'shape': 'straight', 'corners': corners}
+                    else:
+                        # Curved segment
+                        # You may need to handle different types of curves (arc, spiral) accordingly
+                        center, radius = calculate_circle_center_and_radius(x, y, hdg, curvature)
+                        shape_data = {'shape': 'curved', 'center': center, 'radius': radius}
 
                     # Save segment data
-                    segments[segment_id] = {'s': s, 'corners': corners}
+                    segments[segment_id] = {'s': s, **shape_data}
                     segment_id += 1
 
         return segments
@@ -93,6 +106,13 @@ def calculate_rectangle_corners(x, y, hdg, width):
         global_corners.append((x + rotated_x, y + rotated_y))
 
     return global_corners
+
+def calculate_circle_center_and_radius(x, y, hdg, curvature):
+    # Calculate the center of the circle
+    radius = 1 / curvature
+    center_x = x - radius * math.sin(hdg)
+    center_y = y + radius * math.cos(hdg)
+    return (center_x, center_y), radius
 
 
 if __name__ == '__main__':
