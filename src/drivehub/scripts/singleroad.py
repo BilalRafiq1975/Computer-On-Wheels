@@ -57,7 +57,7 @@ def extract_segments(opendrive_xml, target_road_name, target_lane_type):
                 
                 # Extract the geometry data
                 for geometry in target_road.findall("./planView/geometry"):
-                    s = float(geometry.get('s', 0))
+                    s = float(geometry.get('s'))
                     x = float(geometry.get('x', 0))
                     y = float(geometry.get('y', 0))
                     hdg = math.radians(float(geometry.get('hdg', 0)))  # Convert hdg to radians
