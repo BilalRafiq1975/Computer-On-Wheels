@@ -3,6 +3,7 @@ from carla_msgs.msg import CarlaWorldInfo
 import xml.etree.ElementTree as ET
 import networkx as nx
 import matplotlib.pyplot as plt
+import scipy as sp
 
 class RoadCounter:
     def __init__(self):
@@ -50,17 +51,31 @@ class RoadCounter:
 
     def add_road_to_graph(self, road_element):
         try:
+            road_id = road_element.get('id')
+            length = 0.0
+            for geometry in road_element.findall("./planView/geometry"):
+                length += float(geometry.get('length'))
+            self.map_graph.add_node(road_id, length=length)
+            
             successor_id = road_element.find("./link/successor").get("elementId")
             predecessor_id = road_element.find("./link/predecessor").get("elementId")
+            
             if successor_id:
-                self.map_graph.add_edge(road_element.get('id'), successor_id)
+                self.map_graph.add_edge(road_id, successor_id, weight=length)
             if predecessor_id:
-                self.map_graph.add_edge(road_element.get('id'), predecessor_id)
+                self.map_graph.add_edge(road_id, predecessor_id, weight=length)
+                
         except Exception as e:
             rospy.logerr("Error adding road to graph: %s", str(e))
 
     def visualize_graph(self):
-        nx.draw(self.map_graph, with_labels=True, font_weight='bold')
+        pos = nx.spring_layout(self.map_graph)  # Use Spring layout
+        plt.figure(figsize=(12, 8))  # Increase plot size
+        nx.draw(self.map_graph, pos, with_labels=True, font_weight='bold', node_size=100, font_size=8)  # Increase node and label size
+        labels = nx.get_edge_attributes(self.map_graph, 'weight')
+        formatted_labels = {edge: "{:.2f}".format(weight) for edge, weight in labels.items()}
+        nx.draw_networkx_edge_labels(self.map_graph, pos, edge_labels=formatted_labels)
+        plt.title("Road Network Graph")
         plt.show()
 
 
