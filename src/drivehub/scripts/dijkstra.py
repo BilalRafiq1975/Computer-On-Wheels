@@ -34,7 +34,7 @@ def dijkstra(graph, start, end):
     # If no path from start to end is found
     return [], float('inf')
 
-# Example usage:
+
 graph = {
     '0': {'10': 120.40156041807725, '3': 4.908388077782888},
     '10': {'0': 120.40156041807725, '17': 12.731014854747066},
@@ -136,7 +136,7 @@ graph = {
 }
 
 start_node = '5'
-end_node = '516'
+end_node = '933'
 previous_nodes = {}
 shortest_path, shortest_distance = dijkstra(graph, start_node, end_node)
 if shortest_path:
