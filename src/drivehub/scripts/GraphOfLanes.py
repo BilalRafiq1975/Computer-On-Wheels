@@ -8,22 +8,21 @@ def parse_xml(xml_string):
     root = ET.fromstring(xml_string)
     G = nx.DiGraph()
     for road in root.findall('.//road'):
-        for lane in road.findall('.//lane'):
-            lane_type = lane.attrib.get('type', '')
-            if lane_type == 'driving':
-                lane_id = lane.attrib.get('id', '')
-                G.add_node(f"{road.attrib['id']}_Lane_{lane_id}")
-    for junction in root.findall('.//junction'):
-        for connection in junction.findall('.//connection'):
-            incoming_road = connection.attrib['incomingRoad']
-            connecting_road = connection.attrib['connectingRoad']
-            for lane_link in connection.findall('.//laneLink'):
-                from_lane = lane_link.attrib['from']
-                to_lane = lane_link.attrib['to']
-                from_lane_id = f"{incoming_road}_Lane_{from_lane}"
-                to_lane_id = f"{connecting_road}_Lane_{to_lane}"
-                if G.has_node(from_lane_id) and G.has_node(to_lane_id):
-                    G.add_edge(from_lane_id, to_lane_id)
+        road_name = road.attrib['name']
+        road_length = float(road.attrib['length'])
+        for lane_section in road.findall('.//laneSection'):
+            for lane in lane_section.findall('.//lane'):
+                lane_id = f"{road_name}_Lane_{lane.attrib['id']}"
+                lane_type = lane.attrib['type']
+                if lane_type == 'driving':
+                    predecessor = lane.find('.//predecessor')
+                    successor = lane.find('.//successor')
+                    predecessor_id = f"{road_name}_Lane_{predecessor.attrib['id']}" if predecessor is not None else None
+                    successor_id = f"{road_name}_Lane_{successor.attrib['id']}" if successor is not None else None
+                    if predecessor_id is not None:
+                        G.add_edge(predecessor_id, lane_id, weight=road_length)
+                    if successor_id is not None:
+                        G.add_edge(lane_id, successor_id, weight=road_length)
     return G
 
 def world_info_callback(msg):
