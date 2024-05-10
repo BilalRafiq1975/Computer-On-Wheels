@@ -10,6 +10,19 @@ total_roads = 0
 total_lanes = 0
 
 
+def world_info_callback(world_info):
+    global map_name, opendrive_xml, opendrive_data, total_roads, total_lanes
+    map_name = world_info.map_name
+    opendrive_xml = world_info.opendrive
+
+    rospy.loginfo("Received map name: %s", map_name)
+    print("\n")
+
+    # Parse the OpenDRIVE XML and store the data
+    opendrive_data = parse_opendrive(opendrive_xml)
+    total_roads, total_lanes = count_roads_and_lanes(opendrive_xml)
+
+
 def parse_opendrive(opendrive_xml):
     try:
         root = ET.fromstring(opendrive_xml)
@@ -18,16 +31,21 @@ def parse_opendrive(opendrive_xml):
         road_elements = root.findall('.//road')
         road_count = len(road_elements)
 
+        #rospy.loginfo("Total roads in OpenDRIVE map: %d" % road_count)
+
         # Extract start and end coordinates for each road
         for road in road_elements:
             road_name = road.get('name')
-
-            if road_name:
+            start_coord, end_coord = get_start_and_end_coordinates(road)
+            if start_coord and end_coord:
                 print("------------------------------------------------------------------------")
                 rospy.loginfo(f"Road Name: {road_name}")
+                rospy.loginfo(f"Start Coordinates: {start_coord}")
+                rospy.loginfo(f"End Coordinates: {end_coord}")
 
                 # Count lanes for the road and display the driving lanes
                 lane_count, driving_lanes = count_lanes(road)
+                rospy.loginfo(f"Number of lanes: {lane_count}")
                 rospy.loginfo(f"Driving Lanes: {driving_lanes}")
                 rospy.loginfo("\n")
 
@@ -35,6 +53,20 @@ def parse_opendrive(opendrive_xml):
     except Exception as e:
         rospy.logerr("Error parsing OpenDRIVE XML: %s", str(e))
         return None
+
+
+def get_start_and_end_coordinates(road_element):
+    geometry_points = road_element.findall('.//planView/geometry')
+    if not geometry_points:
+        return None, None
+
+    start_point = geometry_points[0]
+    end_point = geometry_points[-1]
+
+    start_x, start_y = float(start_point.get('x', 0)), float(start_point.get('y', 0))
+    end_x, end_y = float(end_point.get('x', 0)), float(end_point.get('y', 0))
+
+    return (start_x, start_y), (end_x, end_y)
 
 
 def count_lanes(road_element):
@@ -74,28 +106,30 @@ def count_roads_and_lanes(opendrive_data):
         return 0, 0
 
 
+def get_opendrive_data():
+    global opendrive_data
+    return opendrive_data
+
+
 class RoadCounter:
     def __init__(self):
         self.total_roads = 0
         self.total_lanes = 0
         rospy.Subscriber("/carla/world_info", CarlaWorldInfo, self.world_info_callback)
 
-    def world_info_callback(self, world_info):
-        global map_name, opendrive_xml, opendrive_data, total_roads, total_lanes
-        map_name = world_info.map_name
-        opendrive_xml = world_info.opendrive
+    def world_info_callback(self, msg):
+        self.total_roads, self.total_lanes = count_roads_and_lanes(msg.opendrive)
+        rospy.loginfo("Total roads in OpenDRIVE map: %d" % self.total_roads)
+        rospy.loginfo("Total lanes in OpenDRIVE map: %d" % self.total_lanes)
 
-        rospy.loginfo("Received map name: %s", map_name)
-        print("\n")
-
-        # Parse the OpenDRIVE XML and store the data
-        opendrive_data = parse_opendrive(opendrive_xml)
-        total_roads, total_lanes = count_roads_and_lanes(opendrive_xml)
+    def run(self):
+        rospy.spin()
 
 
 if __name__ == '__main__':
     try:
         rospy.init_node('get_map_info_node', anonymous=True)
+        rospy.Subscriber('/carla/world_info', CarlaWorldInfo, world_info_callback)
         road_counter = RoadCounter()
         rospy.spin()
     except rospy.ROSInterruptException:

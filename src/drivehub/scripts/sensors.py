@@ -82,4 +82,4 @@ class SpawnSensor:
 
 if __name__ == '__main__':
     rospy.init_node("AV_Drive")
-    spawn_sensor = SpawnSensor(24, "lidar")
+    spawn_sensor = SpawnSensor(24, "radar")
