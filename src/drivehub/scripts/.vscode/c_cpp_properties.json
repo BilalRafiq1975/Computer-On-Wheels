@@ -6,8 +6,7 @@
         "limitSymbolsToIncludedHeaders": false
       },
       "includePath": [
-        "/opt/ros/noetic/include/**",
-        "/home/maanz-ai/ahmed-workspace/devel/include/**",
+
         "/home/maanz-ai/ahmed-workspace/src/ros-bridge/pcl_recorder/include/**",
         "/usr/include/**"
       ],
