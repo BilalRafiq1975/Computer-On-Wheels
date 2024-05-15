@@ -1,40 +1,6 @@
-import heapq
-
-def dijkstra(graph, start, end):
-    # Initialize distances with infinity for all nodes except the start node
-    distances = {node: float('inf') for node in graph}
-    distances[start] = 0
-    
-    # Priority queue to store nodes with their tentative distances
-    priority_queue = [(0, start)]
-    
-    while priority_queue:
-        # Pop the node with the smallest tentative distance
-        current_distance, current_node = heapq.heappop(priority_queue)
-        
-        # If we've reached the end node, return the shortest path and its length
-        if current_node == end:
-            path = [current_node]
-            while current_node != start:
-                current_node = previous_nodes[current_node]
-                path.append(current_node)
-            return path[::-1], distances[end]
-        
-        # Explore neighbors of the current node
-        for neighbor, weight in graph[current_node].items():
-            distance = current_distance + weight
-            
-            # If the new distance is shorter, update it and push to the priority queue
-            if distance < distances[neighbor]:
-                distances[neighbor] = distance
-                heapq.heappush(priority_queue, (distance, neighbor))
-                # Keep track of previous node to reconstruct the shortest path later
-                previous_nodes[neighbor] = current_node
-    
-    # If no path from start to end is found
-    return [], float('inf')
-
-
+def get_graph():
+    return {
+    '0': {'10': 120.40156041807725, '3': 4.908388077782888},
     '10': {'0': 120.40156041807725, '17': 12.731014854747066},
     '3': {'0': 4.908388077782888, '532': 4.908388077782888, '565': 46.639999999999986, '566': 46.639999999999986, '630': 44.91265126400228, '637': 43.028126098808016, '655': 31.11973961824869},
     '1': {'664': 119.92999999999999, '8': 19.54185096138824, '675': 29.67, '676': 29.67, '712': 24.87238160049144},
@@ -131,4 +97,4 @@ def dijkstra(graph, start, end):
     '933': {'14': 30.92000000000001, '13': 30.92000000000001},
     '934': {'14': 30.92000000000001, '13': 30.92000000000001},
     '939': {'14': 26.48813146006281, '12': 26.48813146006281},
-
+  }

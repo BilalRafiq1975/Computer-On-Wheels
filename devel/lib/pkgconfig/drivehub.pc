@@ -1,8 +1,0 @@
-prefix=/home/maanz-ai/ahmed-workspace/devel
-
-Name: drivehub
-Description: Description of drivehub
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: rospy

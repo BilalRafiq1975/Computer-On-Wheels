@@ -2,8 +2,6 @@ import rospy
 from carla_msgs.msg import CarlaWorldInfo
 import xml.etree.ElementTree as ET
 import networkx as nx
-import matplotlib.pyplot as plt
-import scipy as sp
 
 class RoadCounter:
     def __init__(self):
@@ -23,6 +21,7 @@ class RoadCounter:
         except Exception as e:
             rospy.logerr("Error parsing OpenDRIVE XML: %s", str(e))
 
+    def check_driving_lanes(self, road_element):
         is_driving = False
         try:
             lane_sections = road_element.findall("./lanes/laneSection")
@@ -37,13 +36,8 @@ class RoadCounter:
                         break
 
                 if is_driving:
-                    rospy.loginfo(f"Road '{road_element.get('name')}' has driving lane.")
-                    
                     self.add_road_to_graph(road_element)
                     break
-
-            if not is_driving:
-                rospy.loginfo(f"The road '{road_element.get('name')}' has no driving lane.")
         
         except Exception as e:
             rospy.logerr("Error checking driving lanes: %s", str(e))
@@ -68,14 +62,18 @@ class RoadCounter:
             rospy.logerr("Error adding road to graph: %s", str(e))
 
     def visualize_graph(self):
-        pos = nx.spring_layout(self.map_graph)  # Use Spring layout
-        plt.figure(figsize=(12, 8))  # Increase plot size
-        nx.draw(self.map_graph, pos, with_labels=True, font_weight='bold', node_size=100, font_size=8)  # Increase node and label size
-        labels = nx.get_edge_attributes(self.map_graph, 'weight')
-        formatted_labels = {edge: "{:.2f}".format(weight) for edge, weight in labels.items()}
-        nx.draw_networkx_edge_labels(self.map_graph, pos, edge_labels=formatted_labels)
-        plt.title("Road Network Graph")
-        plt.show()
+        graph_dict = {}
+
+        for node in self.map_graph.nodes():
+            neighbors = {}
+            for neighbor, attrs in self.map_graph[node].items():
+                neighbors[neighbor] = attrs['weight']
+            graph_dict[node] = neighbors
+
+        print("graph = {")
+        for node, neighbors in graph_dict.items():
+            print(f"    '{node}': {neighbors},")
+        print("}")
 
 
 def main():
