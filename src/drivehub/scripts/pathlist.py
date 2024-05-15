@@ -23,7 +23,6 @@ class RoadCounter:
         except Exception as e:
             rospy.logerr("Error parsing OpenDRIVE XML: %s", str(e))
 
-    def check_driving_lanes(self, road_element):    
         is_driving = False
         try:
             lane_sections = road_element.findall("./lanes/laneSection")

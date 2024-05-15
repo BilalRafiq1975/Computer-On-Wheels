@@ -34,23 +34,7 @@ def dijkstra(graph, start, end):
     # If no path from start to end is found
     return [], float('inf')
 
-def update_graph(graph, obstacle_node):
-    # Remove the obstacle node and its connections from the graph
-    if obstacle_node in graph:
-        del graph[obstacle_node]
-    for node in graph:
-        if obstacle_node in graph[node]:
-            del graph[node][obstacle_node]
 
-# Sample function to simulate obstacle detection and dynamic replanning
-def simulate_obstacle_detection(graph):
-    # Simulate obstacle detection, for example, at node '468'
-    obstacle_node = '468'
-    if obstacle_node in graph:
-        update_graph(graph, obstacle_node)
-
-# Sample usage
-graph = { '0': {'10': 120.40156041807725, '3': 4.908388077782888},
     '10': {'0': 120.40156041807725, '17': 12.731014854747066},
     '3': {'0': 4.908388077782888, '532': 4.908388077782888, '565': 46.639999999999986, '566': 46.639999999999986, '630': 44.91265126400228, '637': 43.028126098808016, '655': 31.11973961824869},
     '1': {'664': 119.92999999999999, '8': 19.54185096138824, '675': 29.67, '676': 29.67, '712': 24.87238160049144},
@@ -147,29 +131,4 @@ graph = { '0': {'10': 120.40156041807725, '3': 4.908388077782888},
     '933': {'14': 30.92000000000001, '13': 30.92000000000001},
     '934': {'14': 30.92000000000001, '13': 30.92000000000001},
     '939': {'14': 26.48813146006281, '12': 26.48813146006281},
-      } # Your graph definition
 
-start_node = '5'
-end_node = '933'
-previous_nodes = {}
-
-# Initial path planning
-shortest_path, shortest_distance = dijkstra(graph, start_node, end_node)
-if shortest_path:
-    print("Initial Shortest path from", start_node, "to", end_node, ":")
-    print(shortest_path)
-    print("Initial Shortest distance:", shortest_distance)
-else:
-    print("No path found from", start_node, "to", end_node)
-
-# Simulate obstacle detection and dynamic replanning
-simulate_obstacle_detection(graph)
-
-# Replan the path after obstacle detection
-#shortest_path, shortest_distance = dijkstra(graph, start_node, end_node)
-#if shortest_path:
- #   print("\nReplanned Shortest path from", start_node, "to", end_node, ":")
-  #  print(shortest_path)
-   # print("Replanned Shortest distance:", shortest_distance)
-#else:
- #   print("No path found from", start_node, "to", end_node)
