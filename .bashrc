@@ -115,6 +115,26 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
+
+
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+#__conda_setup="$('/home/maanz-ai/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+#if [ $? -eq 0 ]; then
+#    eval "$__conda_setup"
+#else
+#    if [ -f "/home/maanz-ai/anaconda3/etc/profile.d/conda.sh" ]; then
+        . "/home/maanz-ai/anaconda3/etc/profile.d/conda.sh"
+#    else
+#        export PATH="/home/maanz-ai/anaconda3/bin:$PATH"
+#    fi
+#fi
+#unset __conda_setup
+# <<< conda initialize <<<
+
+
+
 source /opt/ros/noetic/setup.bash
 source /opt/ros/noetic/setup.bash
 export PYTHONPATH=$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.13/PythonAPI/carla/dist/carla-0.9.13-py3.7-linux-x86_64.egg
@@ -125,12 +145,11 @@ source /home/maanz-ai/carla-ros-bridge/catkin_ws/devel/setup.bash
 export ROS_WORKSPACE=/home/maanz-ai/carla-ros-bridge/catkin_ws
 export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$ROS_WORKSPACE/src
 source $ROS_WORKSPACE/devel/setup.bash
-# -- START ACTIVESTATE INSTALLATION
-export PATH="/home/maanz-ai/.local/ActiveState/StateTool/release/bin:$PATH"
-# -- STOP ACTIVESTATE INSTALLATION
-# -- START ACTIVESTATE DEFAULT RUNTIME ENVIRONMENT
-export PATH="/home/maanz-ai/.cache/activestate/bin:$PATH"
-if [[ ! -z "$ACTIVESTATE_ACTIVATED" && -f "$ACTIVESTATE_ACTIVATED/activestate.yaml" ]]; then
-  echo "State Tool is operating on project $ACTIVESTATE_ACTIVATED_NAMESPACE, located at $ACTIVESTATE_ACTIVATED"
-fi
-# -- STOP ACTIVESTATE DEFAULT RUNTIME ENVIRONMENT
+export CARLA_PYTHONAPI_PATH="/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI"
+export PYTHONPATH="$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI/carla/agents"
+export PYTHONPATH="$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI/carla"
+export PYTHONPATH="$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI"
+export PYTHONPATH="$PYTHONPATH:$CARLA_PYTHONAPI_PATH"
+
+export CARLA_PYTHONAPI_PATH="/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI"
+export PYTHONPATH="$PYTHONPATH:$CARLA_PYTHONAPI_PATH"
