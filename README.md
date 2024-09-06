@@ -6,12 +6,6 @@
 - [System Architecture](#system-architecture)
 - [Technologies Used](#technologies-used)
 - [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Testing](#testing)
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
 
 ## Project Overview
 This project is focused on developing an **Autonomous Vehicle Navigation System** that enables vehicles to navigate safely and efficiently from a source to a destination. The system addresses key challenges in autonomous navigation, including path following, path planning, obstacle detection, and avoidance.
