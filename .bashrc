@@ -122,13 +122,13 @@ fi
 # !! Contents within this block are managed by 'conda init' !!
 #__conda_setup="$('/home/maanz-ai/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
 #if [ $? -eq 0 ]; then
-#    eval "$__conda_setup"
+ #   eval "$__conda_setup"
 #else
-#    if [ -f "/home/maanz-ai/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "/home/maanz-ai/anaconda3/etc/profile.d/conda.sh"
-#    else
-#        export PATH="/home/maanz-ai/anaconda3/bin:$PATH"
-#    fi
+ #   if [ -f "/home/maanz-ai/anaconda3/etc/profile.d/conda.sh" ]; then
+  #      . "/home/maanz-ai/anaconda3/etc/profile.d/conda.sh"
+   # else
+   #     export PATH="/home/maanz-ai/anaconda3/bin:$PATH"
+    #fi
 #fi
 #unset __conda_setup
 # <<< conda initialize <<<
@@ -145,11 +145,15 @@ source /home/maanz-ai/carla-ros-bridge/catkin_ws/devel/setup.bash
 export ROS_WORKSPACE=/home/maanz-ai/carla-ros-bridge/catkin_ws
 export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$ROS_WORKSPACE/src
 source $ROS_WORKSPACE/devel/setup.bash
-export CARLA_PYTHONAPI_PATH="/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI"
-export PYTHONPATH="$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI/carla/agents"
-export PYTHONPATH="$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI/carla"
-export PYTHONPATH="$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI"
+export CARLA_PYTHONAPI_PATH="/home/maanz-ai/Downloads/CARLA_0.9.13/PythonAPI"
+export PYTHONPATH="$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.13/PythonAPI/carla/agents"
+export PYTHONPATH="$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.13/PythonAPI/carla"
+export PYTHONPATH="$PYTHONPATH:/home/maanz-ai/Downloads/CARLA_0.9.13/PythonAPI"
 export PYTHONPATH="$PYTHONPATH:$CARLA_PYTHONAPI_PATH"
 
 export CARLA_PYTHONAPI_PATH="/home/maanz-ai/Downloads/CARLA_0.9.15/PythonAPI"
 export PYTHONPATH="$PYTHONPATH:$CARLA_PYTHONAPI_PATH"
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
