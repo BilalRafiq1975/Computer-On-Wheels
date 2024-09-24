@@ -5,7 +5,6 @@
 - [Key Features](#key-features)
 - [System Architecture](#system-architecture)
 - [Technologies Used](#technologies-used)
-- [Traffic Light Detection Module](#traffic-light-detection-module)
 - [Installation](#installation)
 
 ## Project Overview
