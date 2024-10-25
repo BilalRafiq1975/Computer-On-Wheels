@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="your_package_name" type="rgb_camera_node.py" name="rgb_camera_node" />
+    <node pkg="your_package_name" type="traffic_light_detection_node.py" name="traffic_light_detection_node">
+        <param name="hsv_config" value="$(find your_package_name)/config/hsv_thresholds.yaml" />
+    </node>
+    <node pkg="your_package_name" type="decision_making_node.py" name="decision_making_node" />
+</launch>
+
