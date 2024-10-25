@@ -1,0 +1,8 @@
+hsv_thresholds:
+  red1: [0, 100, 100]      # Lower range for red
+  red2: [10, 255, 255]     # Upper range for red
+  red3: [160, 100, 100]    # Lower range for red (second range)
+  red4: [180, 255, 255]    # Upper range for red (second range)
+  yellow: [15, 100, 100, 30, 255, 255] # Lower and upper range for yellow
+  green: [40, 100, 100, 80, 255, 255]   # Lower and upper range for green
+
