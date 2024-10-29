@@ -12,6 +12,11 @@ This project is focused on developing an **Autonomous Vehicle Navigation System*
 
 The project leverages a combination of advanced simulation, robotics, and programming technologies to achieve robust and reliable autonomous navigation in complex environments.
 
+## System Architecture
+The architecture of the Autonomous Vehicle Navigation System is modular, with each module responsible for specific tasks related to autonomous navigation.
+
+![System Architecture](Computer-On-Wheels/Artifacts/Diagrams/Final%20Architecture.png)
+
 ## Key Features
 - **🛤️ Path Planning**: Generates an optimal path from the source to the destination.
 - **➡️ Path Following**: Ensures the vehicle follows the planned path accurately.
