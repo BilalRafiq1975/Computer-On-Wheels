@@ -15,7 +15,7 @@ The project leverages a combination of advanced simulation, robotics, and progra
 ## System Architecture
 The architecture of the Autonomous Vehicle Navigation System is modular, with each module responsible for specific tasks related to autonomous navigation.
 
-![System Architecture](Computer-On-Wheels/Artifacts/Diagrams/Final%20Architecture.png)
+![System Architecture](Artifacts/Diagrams/Final%20Architection.png)
 
 ## Key Features
 - **🛤️ Path Planning**: Generates an optimal path from the source to the destination.
