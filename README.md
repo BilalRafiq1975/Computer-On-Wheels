@@ -31,13 +31,7 @@ The data flow through the system is illustrated below, showcasing interactions a
 - **🔴 Detecting Traffic Lights**: Utilizes a monocular camera to identify traffic light colors (red, yellow, green) and their states.
 - **📸 Image Processing**: Applies computer vision techniques using OpenCV for effective recognition.
 - **🚦 Decision Making**: Integrates with the planning module to make decisions based on the detected traffic light states, ensuring compliance with traffic rules.
-## System Architecture
-The system is divided into several modules:
 
-- **👁️ Perception Module**: Processes sensor data for obstacle detection.
-- **🧠 Planning Module**: Handles path planning and decision-making.
-- **🎮 Control Module**: Manages vehicle control to follow the planned path.
-- **🔗 Simulation Interface**: Integrates with CARLA via the CARLA-ROS bridge.
 
 ## Technologies Used
 - **🚙 CARLA Simulator**: For realistic vehicle simulation.
