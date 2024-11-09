@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import rospy
 from geometry_msgs.msg import PoseStamped, Pose
 from styx_msgs.msg import TrafficLightArray, TrafficLight
@@ -26,6 +25,8 @@ class TLDetector(object):
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string, Loader=yaml.FullLoader)
 
+        self.max_speed = rospy.get_param("/max_speed", 40)
+        
         rospy.Timer(rospy.Duration(0.1), self.process_traffic_lights)  # Periodically check traffic lights
         rospy.spin()
 
@@ -45,6 +46,9 @@ class TLDetector(object):
         return math.sqrt((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2)
 
     def get_closest_waypoint(self, pose):
+        if not self.waypoints:
+            rospy.logwarn("Waypoints not initialized")
+            return -1
         min_dist = float('inf')
         closest_wp_index = -1
         for i, waypoint in enumerate(self.waypoints):
@@ -84,7 +88,6 @@ class TLDetector(object):
 
     def get_traffic_light_state(self):
         if self.lights:
-            
             for light in self.lights:
                 if light.state == TrafficLight.RED:
                     return 'red'
@@ -95,8 +98,8 @@ class TLDetector(object):
         return 'unknown'
 
     def handle_yellow_light(self, distance_to_stop_line):
-        threshold_distance = 30  # Distance in meters to decide whether to stop or proceed
-        time_until_red = 3  # Assumed time until the light turns red
+        threshold_distance = rospy.get_param("/threshold_distance", 30)
+        time_until_red = rospy.get_param("/time_until_red", 3)
         speed_mps = self.speed / 3.6  # Convert speed from km/h to m/s
         stopping_distance = speed_mps * time_until_red
 
@@ -110,22 +113,9 @@ class TLDetector(object):
 
     def proceed(self):
         rospy.loginfo("Proceeding through the traffic light.")
-        target_speed = self.speed
-        self.current_state_pub.publish(target_speed)
-
-        if target_speed > MAX_SPEED:
-          target_speed = MAX_SPEED
-
+        target_speed = min(self.speed, self.max_speed)
         self.current_state_pub.publish(target_speed)
 
     def stop(self):
         rospy.loginfo("Stopping at the traffic light.")
-        stop_speed = 0  # Target speed for stopping
-        self.current_state_pub.publish(stop_speed)  # Publish the stop command
-        self.stop_speed
-
-if __name__ == '__main__':
-    try:
-        TLDetector()
-    except rospy.ROSInterruptException:
-        rospy.logerr('Could not start traffic light detector node.')
+        self.current_state_pub.publish(0)  # Publish the stop command
