@@ -12,3 +12,5 @@ stop_line_positions:
     - [821.96, 2905.8]
     - [161.76, 2303.82]
     - [351.84, 1574.65]
+    
+#This file provides some setup details for how your autonomous car "sees" and where it should stop when approaching intersections.
