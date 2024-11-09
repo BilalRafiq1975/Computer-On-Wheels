@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#THIS IS THE MAIN FILE OF THE SOFTWARE SYSTEM
 
 
 """Computer on Wheels."""
