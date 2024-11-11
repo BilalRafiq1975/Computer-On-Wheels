@@ -550,7 +550,6 @@ class GnssSensor(object):
 # -- CameraManager -------------------------------------------------------------
 # ==============================================================================
 
-
 class CameraManager(object):
     """ Class for camera management"""
 
@@ -649,12 +648,30 @@ class CameraManager(object):
             lidar_data = np.array(points[:, :2])
             lidar_data *= min(self.hud.dim) / 100.0
             lidar_data += (0.5 * self.hud.dim[0], 0.5 * self.hud.dim[1])
-            lidar_data = np.fabs(lidar_data)  # pylint: disable=assignment-from-no-return
+            lidar_data = np.fabs(lidar_data)
             lidar_data = lidar_data.astype(np.int32)
             lidar_data = np.reshape(lidar_data, (-1, 2))
+
+            # Apply DBSCAN clustering
+            dbscan = DBSCAN(eps=3, min_samples=5)  # Set DBSCAN parameters
+            clusters = dbscan.fit_predict(lidar_data)
+
+            # Create an image for rendering
             lidar_img_size = (self.hud.dim[0], self.hud.dim[1], 3)
             lidar_img = np.zeros(lidar_img_size)
-            lidar_img[tuple(lidar_data.T)] = (255, 255, 255)
+
+            # Colorize clusters for visualization
+            unique_clusters = set(clusters)
+            colors = [tuple(np.random.randint(0, 255, 3)) for _ in unique_clusters]
+
+            for idx, point in enumerate(lidar_data):
+                if clusters[idx] != -1:  # Ignore noise points
+                    color = colors[clusters[idx]]
+                    lidar_img[point[1], point[0]] = color  # Note: flipped y, x for correct indexing
+
+            # Handle noise points (optional)
+            lidar_img[tuple(lidar_data[clusters == -1].T)] = (255, 255, 255)  # White for noise
+
             self.surface = pygame.surfarray.make_surface(lidar_img)
         else:
             image.convert(self.sensors[self.index][1])
