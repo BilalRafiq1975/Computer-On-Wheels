@@ -2,7 +2,7 @@
 
 
 """Computer on Wheels."""
-
+from sklearn.cluster import DBSCAN
 from __future__ import print_function
 
 import argparse
