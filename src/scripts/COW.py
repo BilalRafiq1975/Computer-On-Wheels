@@ -663,6 +663,10 @@ class CameraManager(object):
 
             # Apply DBSCAN clustering
             dbscan = DBSCAN(eps=3, min_samples=5)  # Set DBSCAN parameters for clustering
+
+            # eps (distance threshold): Specifies the maximum distance between two points to be considered neighbors.
+            # min samples Defines the minimum number of points required to form a dense region (a cluster).
+
             clusters = dbscan.fit_predict(lidar_data)  # Perform clustering on the lidar data
 
             # Create an image for rendering
