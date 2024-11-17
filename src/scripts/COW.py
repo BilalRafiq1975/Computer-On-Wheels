@@ -314,6 +314,7 @@ class HUD(object):
         def dist(l):
             return math.sqrt((l.x - transform.location.x)**2 + (l.y - transform.location.y)
                              ** 2 + (l.z - transform.location.z)**2)
+         # Update the vehicles list with distances and exclude the player's vehicle
         vehicles = [(dist(x.get_location()), x) for x in vehicles if x.id != world.player.id]
 
         for dist, vehicle in sorted(vehicles):
