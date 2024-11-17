@@ -555,13 +555,15 @@ class CameraManager(object):
 
     def __init__(self, parent_actor, hud):
         """Constructor method"""
-        self.sensor = None
-        self.surface = None
-        self._parent = parent_actor
-        self.hud = hud
-        self.recording = False
-        bound_y = 0.5 + self._parent.bounding_box.extent.y
-        attachment = carla.AttachmentType
+        self.sensor = None  # Initialize sensor as None
+        self.surface = None  # Initialize surface as None for image display
+        self._parent = parent_actor  # Reference to the parent actor (e.g., vehicle)
+        self.hud = hud  # Reference to HUD (Head-Up Display) for notifications and display
+        self.recording = False  # Flag to check if recording is active
+        bound_y = 0.5 + self._parent.bounding_box.extent.y  # Get the y-bound of the parent actor's bounding box
+        attachment = carla.AttachmentType  # Shortcut for attachment type from CARLA library
+
+        # Define camera transforms (positions and orientations) for different camera views
         self._camera_transforms = [
             (carla.Transform(
                 carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), attachment.SpringArm),
@@ -573,7 +575,9 @@ class CameraManager(object):
                 carla.Location(x=-8.0, z=6.0), carla.Rotation(pitch=6.0)), attachment.SpringArm),
             (carla.Transform(
                 carla.Location(x=-1, y=-bound_y, z=0.5)), attachment.Rigid)]
-        self.transform_index = 1
+        self.transform_index = 1  # Index to keep track of the current camera transform
+
+        # Define different types of sensors with their respective configurations
         self.sensors = [
             ['sensor.camera.rgb', cc.Raw, 'Camera RGB'],
             ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)'],
@@ -583,33 +587,37 @@ class CameraManager(object):
             ['sensor.camera.semantic_segmentation', cc.CityScapesPalette,
              'Camera Semantic Segmentation (CityScapes Palette)'],
             ['sensor.lidar.ray_cast', None, 'Lidar (Ray-Cast)']]
+
+        # Get a reference to the world and the blueprint library for creating sensors
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
+
+        # Configure sensor attributes based on type (e.g., camera or lidar)
         for item in self.sensors:
-            blp = bp_library.find(item[0])
-            if item[0].startswith('sensor.camera'):
-                blp.set_attribute('image_size_x', str(hud.dim[0]))
-                blp.set_attribute('image_size_y', str(hud.dim[1]))
-            elif item[0].startswith('sensor.lidar'):
-                blp.set_attribute('range', '50')
-            item.append(blp)
-        self.index = None
+            blp = bp_library.find(item[0])  # Find the blueprint for the sensor type
+            if item[0].startswith('sensor.camera'):  # If the sensor is a camera
+                blp.set_attribute('image_size_x', str(hud.dim[0]))  # Set image width
+                blp.set_attribute('image_size_y', str(hud.dim[1]))  # Set image height
+            elif item[0].startswith('sensor.lidar'):  # If the sensor is a lidar
+                blp.set_attribute('range', '50')  # Set lidar range attribute
+            item.append(blp)  # Append the blueprint to the sensor configuration
+        self.index = None  # Initialize sensor index
 
     def toggle_camera(self):
         """Activate a camera"""
-        self.transform_index = (self.transform_index + 1) % len(self._camera_transforms)
-        self.set_sensor(self.index, notify=False, force_respawn=True)
+        self.transform_index = (self.transform_index + 1) % len(self._camera_transforms)  # Cycle through camera views
+        self.set_sensor(self.index, notify=False, force_respawn=True)  # Activate the new camera view
 
     def set_sensor(self, index, notify=True, force_respawn=False):
         """Set a sensor"""
-        index = index % len(self.sensors)
+        index = index % len(self.sensors)  # Ensure the index is within the bounds of the sensors list
         needs_respawn = True if self.index is None else (
-            force_respawn or (self.sensors[index][0] != self.sensors[self.index][0]))
+            force_respawn or (self.sensors[index][0] != self.sensors[self.index][0]))  # Check if respawn is needed
         if needs_respawn:
             if self.sensor is not None:
-                self.sensor.destroy()
-                self.surface = None
-            self.sensor = self._parent.get_world().spawn_actor(
+                self.sensor.destroy()  # Destroy the existing sensor if present
+                self.surface = None  # Reset the surface
+            self.sensor = self._parent.get_world().spawn_actor(  # Spawn the new sensor actor
                 self.sensors[index][-1],
                 self._camera_transforms[self.transform_index][0],
                 attach_to=self._parent,
@@ -617,71 +625,72 @@ class CameraManager(object):
 
             # We need to pass the lambda a weak reference to
             # self to avoid circular reference.
-            weak_self = weakref.ref(self)
-            self.sensor.listen(lambda image: CameraManager._parse_image(weak_self, image))
+            weak_self = weakref.ref(self)  # Create a weak reference to avoid memory leaks
+            self.sensor.listen(lambda image: CameraManager._parse_image(weak_self, image))  # Set the sensor to listen for data
         if notify:
-            self.hud.notification(self.sensors[index][2])
-        self.index = index
+            self.hud.notification(self.sensors[index][2])  # Notify HUD with sensor information
+        self.index = index  # Update the sensor index
 
     def next_sensor(self):
         """Get the next sensor"""
-        self.set_sensor(self.index + 1)
+        self.set_sensor(self.index + 1)  # Activate the next sensor in the list
 
     def toggle_recording(self):
         """Toggle recording on or off"""
-        self.recording = not self.recording
-        self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
+        self.recording = not self.recording  # Toggle recording state
+        self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))  # Notify HUD about recording state
 
     def render(self, display):
         """Render method"""
         if self.surface is not None:
-            display.blit(self.surface, (0, 0))
+            display.blit(self.surface, (0, 0))  # Render the surface onto the display
 
     @staticmethod
     def _parse_image(weak_self, image):
-        self = weak_self()
+        self = weak_self()  # Get a reference to the instance
         if not self:
-            return
-        if self.sensors[self.index][0].startswith('sensor.lidar'):
-            points = np.frombuffer(image.raw_data, dtype=np.dtype('f4'))
-            points = np.reshape(points, (int(points.shape[0] / 4), 4))
-            lidar_data = np.array(points[:, :2])
-            lidar_data *= min(self.hud.dim) / 100.0
-            lidar_data += (0.5 * self.hud.dim[0], 0.5 * self.hud.dim[1])
-            lidar_data = np.fabs(lidar_data)
-            lidar_data = lidar_data.astype(np.int32)
-            lidar_data = np.reshape(lidar_data, (-1, 2))
+            return  # Exit if reference is no longer valid
+        if self.sensors[self.index][0].startswith('sensor.lidar'):  # Check if the current sensor is lidar
+            points = np.frombuffer(image.raw_data, dtype=np.dtype('f4'))  # Extract raw lidar data as float32
+            points = np.reshape(points, (int(points.shape[0] / 4), 4))  # Reshape data into (x, y, z, intensity)
+            lidar_data = np.array(points[:, :2])  # Extract only x and y coordinates
+            lidar_data *= min(self.hud.dim) / 100.0  # Scale data for visualization
+            lidar_data += (0.5 * self.hud.dim[0], 0.5 * self.hud.dim[1])  # Center data in the display
+            lidar_data = np.fabs(lidar_data)  # Get absolute values for indexing
+            lidar_data = lidar_data.astype(np.int32)  # Convert to integer for pixel indexing
+            lidar_data = np.reshape(lidar_data, (-1, 2))  # Reshape for processing
 
             # Apply DBSCAN clustering
-            dbscan = DBSCAN(eps=3, min_samples=5)  # Set DBSCAN parameters
-            clusters = dbscan.fit_predict(lidar_data)
+            dbscan = DBSCAN(eps=3, min_samples=5)  # Set DBSCAN parameters for clustering
+            clusters = dbscan.fit_predict(lidar_data)  # Perform clustering on the lidar data
 
             # Create an image for rendering
-            lidar_img_size = (self.hud.dim[0], self.hud.dim[1], 3)
-            lidar_img = np.zeros(lidar_img_size)
+            lidar_img_size = (self.hud.dim[0], self.hud.dim[1], 3)  # Set the image size for display
+            lidar_img = np.zeros(lidar_img_size)  # Initialize an empty image
 
             # Colorize clusters for visualization
-            unique_clusters = set(clusters)
-            colors = [tuple(np.random.randint(0, 255, 3)) for _ in unique_clusters]
+            unique_clusters = set(clusters)  # Get unique cluster labels
+            colors = [tuple(np.random.randint(0, 255, 3)) for _ in unique_clusters]  # Generate random colors for clusters
 
             for idx, point in enumerate(lidar_data):
-                if clusters[idx] != -1:  # Ignore noise points
-                    color = colors[clusters[idx]]
-                    lidar_img[point[1], point[0]] = color  # Note: flipped y, x for correct indexing
+                if clusters[idx] != -1:  # Ignore noise points (labeled as -1)
+                    color = colors[clusters[idx]]  # Get color for the cluster
+                    lidar_img[point[1], point[0]] = color  # Set pixel color at the point (y, x)
 
             # Handle noise points (optional)
-            lidar_img[tuple(lidar_data[clusters == -1].T)] = (255, 255, 255)  # White for noise
+            lidar_img[tuple(lidar_data[clusters == -1].T)] = (255, 255, 255)  # Set noise points to white
 
-            self.surface = pygame.surfarray.make_surface(lidar_img)
+            self.surface = pygame.surfarray.make_surface(lidar_img)  # Create a surface for rendering
         else:
-            image.convert(self.sensors[self.index][1])
-            array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-            array = np.reshape(array, (image.height, image.width, 4))
-            array = array[:, :, :3]
-            array = array[:, :, ::-1]
-            self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+            image.convert(self.sensors[self.index][1])  # Convert image using the sensor's conversion type
+            array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))  # Extract image data as uint8
+            array = np.reshape(array, (image.height, image.width, 4))  # Reshape to (height, width, channels)
+            array = array[:, :, :3]  # Keep RGB channels, ignoring alpha
+            array = array[:, :, ::-1]  # Convert from BGRA to RGB format
+            self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))  # Create a surface from the image data
+
         if self.recording:
-            image.save_to_disk('_out/%08d' % image.frame)
+            image.save_to_disk('_out/%08d' % image.frame)  # Save the image to disk if recording is enabled
 
 # ==============================================================================
 # -- Game Loop ---------------------------------------------------------
