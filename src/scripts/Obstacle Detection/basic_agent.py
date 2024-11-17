@@ -80,16 +80,17 @@ class BasicAgent(object):
         self.current_speed = msg.velocity * 3.6  # m/s to km/h
 
     def add_emergency_stop(self, control):
-        """
-        Overwrites the throttle and brake values of a control to perform an emergency stop.
-        The steering is kept the same to avoid going out of the lane when stopping during turns.
+    """
+    Overwrites the throttle and brake values of a control to perform an emergency stop.
+    The steering is kept the same to avoid going out of the lane when stopping during turns.
 
-            :param control (CarlaEgoVehicleControl): control to be modified
-        """
-        control.throttle = 0.0
-        control.brake = self._max_brake
-        control.hand_brake = False
-        return control
+        :param control (CarlaEgoVehicleControl): control to be modified
+    """
+    control.throttle = 0.0  # Set the throttle to 0 to stop accelerating (emergency stop)
+    control.brake = self._max_brake  # Apply maximum brake to stop the vehicle as quickly as possible
+    control.hand_brake = False  # Ensure the handbrake is not engaged (standard braking is used)
+    return control  # Return the modified control object with emergency stop settings
+
 
     def set_target_speed(self, speed):
         """
@@ -229,33 +230,49 @@ class BasicAgent(object):
         return False, None
 
     def _vehicle_obstacle_detected(self, max_distance=None, up_angle_th=90, low_angle_th=0, lane_offset=0):
-        """
-        Method to check if there is a vehicle in front blocking our path.
+    """
+    Method to check if there is a vehicle in front blocking our path.
 
-            :param max_distance (float): Maximum distance to check for vehicle obstacles
-            :param up_angle_th (float): upper threshold of the view angle (in degrees)
-            :param low_angle_th (float): lower threshold of the view angle (in degrees)
-            :param lane_offset (float): lane offset for lateral checks (in meters)
-        """
-        if self._ignore_vehicles:
-            return False, None, -1
+    :param max_distance (float): Maximum distance to check for vehicle obstacles
+    :param up_angle_th (float): upper threshold of the view angle (in degrees)
+    :param low_angle_th (float): lower threshold of the view angle (in degrees)
+    :param lane_offset (float): lane offset for lateral checks (in meters)
+    """
+    
+    # Check if we are ignoring vehicle detection (this might be for certain situations where obstacles aren't important)
+    if self._ignore_vehicles:
+        return False, None, -1  # No obstacle detected, return negative result
 
-        ego_vehicle_location = self._vehicle_id.get_location()
-        ego_vehicle_waypoint = self._map.get_waypoint(ego_vehicle_location)
+    # Get the current location of our vehicle (the "ego vehicle")
+    ego_vehicle_location = self._vehicle_id.get_location()
 
-        vehicle_list = self._world.get_actors().filter("*vehicle*")
-        for target_vehicle in vehicle_list:
-            if target_vehicle.id == self._vehicle_id.id:
-                continue
+    # Find out which road and lane our vehicle is on
+    ego_vehicle_waypoint = self._map.get_waypoint(ego_vehicle_location)
 
-            target_vehicle_location = target_vehicle.get_location()
-            target_vehicle_waypoint = self._map.get_waypoint(target_vehicle_location)
+    # Get a list of all vehicles in the world
+    vehicle_list = self._world.get_actors().filter("*vehicle*")
 
-            if ego_vehicle_waypoint.road_id != target_vehicle_waypoint.road_id or \
-               ego_vehicle_waypoint.lane_id != target_vehicle_waypoint.lane_id:
-                continue
+    # Loop through each vehicle to check if it is blocking our way
+    for target_vehicle in vehicle_list:
+        
+        # Skip checking our own vehicle
+        if target_vehicle.id == self._vehicle_id.id:
+            continue
 
-            if is_within_distance(target_vehicle_location, ego_vehicle_location, self._vehicle_id.get_transform().rotation.yaw, max_distance):
-                return True, target_vehicle, compute_distance(target_vehicle_location, ego_vehicle_location)
+        # Get the location of the other vehicle we are checking
+        target_vehicle_location = target_vehicle.get_location()
 
-        return False, None, -1
+        # Find out which road and lane the other vehicle is on
+        target_vehicle_waypoint = self._map.get_waypoint(target_vehicle_location)
+
+        # If the other vehicle is not on the same road or lane as us, ignore it
+        if ego_vehicle_waypoint.road_id != target_vehicle_waypoint.road_id or \
+           ego_vehicle_waypoint.lane_id != target_vehicle_waypoint.lane_id:
+            continue
+
+        # Check if the other vehicle is within a certain distance from us
+        if is_within_distance(target_vehicle_location, ego_vehicle_location, self._vehicle_id.get_transform().rotation.yaw, max_distance):
+            return True, target_vehicle, compute_distance(target_vehicle_location, ego_vehicle_location)  # Obstacle detected!
+
+    # If no obstacles are found, return negative result
+    return False, None, -1
