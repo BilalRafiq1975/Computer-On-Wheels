@@ -1,83 +1,99 @@
-
 import rospy
+import math
+from std_msgs.msg import Float64
 from geometry_msgs.msg import Twist
 
-class SteeringController:
+class AckermannSteeringNode:
     def __init__(self):
-        # Initialize ROS node
-        rospy.init_node('steering_controller', anonymous=True)
-        
-        # Publisher for velocity commands
-        self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-        
-        # Subscriber for sensor data (if applicable)
-        
-        rospy.Subscriber('/sensor_topic', SensorMsg, self.sensor_callback)
-        
-        # Set control rate (10 Hz)
-        self.rate = rospy.Rate(10)
-        
-        # Target linear velocity
-        self.target_linear_speed = 0.5  # meters per second
-        
-        # Target angular velocity (initially set to zero)
-        self.target_angular_speed = 0.0  # radians per second
-        
-        # Twist message to publish
-        self.twist_msg = Twist()
+        """
+        Initialize the Ackermann Steering ROS Node.
+        """
+        rospy.init_node("ackermann_steering_node", anonymous=True)
 
-    def control_loop(self):
-        # Main control loop
-        while not rospy.is_shutdown():
-            # Update twist message with target velocities
-            self.twist_msg.linear.x = self.target_linear_speed
-            self.twist_msg.angular.z = self.calculate_angular_speed()
-            
-            # Publish twist message
-            self.cmd_vel_pub.publish(self.twist_msg)
-            
-            # Sleep to maintain control rate
-            self.rate.sleep()
+        # Vehicle parameters (from ROS parameter server or defaults)
+        self.wheelbase = rospy.get_param("~wheelbase", 2.5)  # meters
+        self.track_width = rospy.get_param("~track_width", 1.5)  # meters
+        self.k_p = rospy.get_param("~proportional_gain", 0.5)  # Proportional control gain
 
-    def calculate_angular_speed(self):
-        # Placeholder function to calculate angular speed based on sensor input or navigation algorithms
-        
-        return 0.0  # radians per second
+        # Publishers for inner and outer steering angles
+        self.inner_angle_pub = rospy.Publisher("/ackermann/inner_wheel_angle", Float64, queue_size=10)
+        self.outer_angle_pub = rospy.Publisher("/ackermann/outer_wheel_angle", Float64, queue_size=10)
 
-    def sensor_callback(self, data):
-        # Callback function to process sensor data
-        # This function will be called whenever new sensor data is received
-        # You can implement sensor data processing logic here to adjust the steering control
-        
-        # Example: Extract relevant data from the sensor message
-        sensor_value = data.value
-        
-        # Example: Adjust target angular speed based on sensor data
-        self.target_angular_speed = some_function_of(sensor_value)
-        
-        pass  # Placeholder for actual implementation
+        # Subscriber for the desired turning radius
+        self.turning_radius_sub = rospy.Subscriber("/ackermann/turning_radius", Float64, self.turning_radius_callback)
 
-    def shutdown(self):
-        # Shutdown procedure to stop the robot safely
-        rospy.loginfo("Stopping the steering controller...")
-        
-        # Set velocities to zero
-        self.twist_msg.linear.x = 0.0
-        self.twist_msg.angular.z = 0.0
-        
-        # Publish zero velocities
-        self.cmd_vel_pub.publish(self.twist_msg)
-        
-        # Allow time for the robot to stop
-        rospy.sleep(1)
+        # Subscriber for the current steering angle (optional feedback loop)
+        self.current_angle_sub = rospy.Subscriber("/ackermann/current_angle", Float64, self.current_angle_callback)
 
-if __name__ == '__main__':
+        self.current_steering_angle = 0.0  # Initialize current angle
+
+        rospy.loginfo("Ackermann Steering Node Initialized")
+
+    def calculate_steering_angles(self, turning_radius: float) -> tuple:
+        """
+        Calculate inner and outer steering angles based on the Ackermann geometry.
+        
+        :param turning_radius: Desired turning radius (in meters).
+        :return: Tuple of (inner_angle, outer_angle) in radians.
+        """
+        if turning_radius < self.track_width / 2:
+            rospy.logwarn("Turning radius must be larger than half the track width.")
+            return 0.0, 0.0
+
+        # Inside and outside wheel radii
+        R_inner = turning_radius - self.track_width / 2
+        R_outer = turning_radius + self.track_width / 2
+
+        # Calculate steering angles
+        delta_inner = math.atan(self.wheelbase / R_inner)
+        delta_outer = math.atan(self.wheelbase / R_outer)
+
+        return delta_inner, delta_outer
+
+    def proportional_control(self, desired_angle: float, current_angle: float) -> float:
+        """
+        Apply proportional control to adjust the steering angle.
+        
+        :param desired_angle: Desired steering angle (in radians).
+        :param current_angle: Current steering angle (in radians).
+        :return: Corrected steering angle (in radians).
+        """
+        error = desired_angle - current_angle
+        return self.k_p * error
+
+    def turning_radius_callback(self, msg: Float64):
+        """
+        Callback for the desired turning radius.
+        
+        :param msg: ROS message containing the turning radius (in meters).
+        """
+        turning_radius = msg.data
+        inner_angle, outer_angle = self.calculate_steering_angles(turning_radius)
+
+        # Apply proportional control for the inner wheel (optional)
+        corrected_inner_angle = self.proportional_control(inner_angle, self.current_steering_angle)
+
+        # Publish the calculated angles
+        self.inner_angle_pub.publish(corrected_inner_angle)
+        self.outer_angle_pub.publish(outer_angle)
+
+        rospy.loginfo(f"Published Inner Angle: {math.degrees(corrected_inner_angle):.2f}°")
+        rospy.loginfo(f"Published Outer Angle: {math.degrees(outer_angle):.2f}°")
+
+    def current_angle_callback(self, msg: Float64):
+        """
+        Callback for the current steering angle.
+        
+        :param msg: ROS message containing the current steering angle (in radians).
+        """
+        self.current_steering_angle = msg.data
+
+def main():
     try:
-        # Create SteeringController instance
-        controller = SteeringController()
-        
-        # Start control loop
-        controller.control_loop()
+        ackermann_steering_node = AckermannSteeringNode()
+        rospy.spin()
     except rospy.ROSInterruptException:
-        pass
+        rospy.logerr("Ackermann Steering Node Terminated")
 
+if __name__ == "__main__":
+    main()
