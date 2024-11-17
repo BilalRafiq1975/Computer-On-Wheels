@@ -87,79 +87,105 @@ class BehaviorAgent(BasicAgent):
         return affected
 
     def _tailgating(self, waypoint, vehicle_list):
-        """
-        This method is in charge of tailgating behaviors.
+    """
+    This method is in charge of tailgating behaviors.
+    :param location: current location of the agent
+    :param waypoint: current waypoint of the agent
+    :param vehicle_list: list of all the nearby vehicles
+    """
+    # Retrieves whether lane change is allowed on the left lane
+    left_turn = waypoint.left_lane_marking.lane_change
+    # Retrieves whether lane change is allowed on the right lane
+    right_turn = waypoint.right_lane_marking.lane_change
 
-            :param location: current location of the agent
-            :param waypoint: current waypoint of the agent
-            :param vehicle_list: list of all the nearby vehicles
-        """
+    # Gets the waypoint of the left lane from the current waypoint
+    left_wpt = waypoint.get_left_lane()
+    # Gets the waypoint of the right lane from the current waypoint
+    right_wpt = waypoint.get_right_lane()
 
-        left_turn = waypoint.left_lane_marking.lane_change
-        right_turn = waypoint.right_lane_marking.lane_change
-
-        left_wpt = waypoint.get_left_lane()
-        right_wpt = waypoint.get_right_lane()
-
-        behind_vehicle_state, behind_vehicle, _ = self._vehicle_obstacle_detected(vehicle_list, max(
-            self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, low_angle_th=160)
-        if behind_vehicle_state and self._speed < get_speed(behind_vehicle):
-            if (right_turn == carla.LaneChange.Right or right_turn ==
-                    carla.LaneChange.Both) and waypoint.lane_id * right_wpt.lane_id > 0 and right_wpt.lane_type == carla.LaneType.Driving:
-                new_vehicle_state, _, _ = self._vehicle_obstacle_detected(vehicle_list, max(
-                    self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, lane_offset=1)
-                if not new_vehicle_state:
-                    print("Tailgating, moving to the right!")
-                    end_waypoint = self._local_planner.target_waypoint
-                    self._behavior.tailgate_counter = 200
-                    self.set_destination(end_waypoint.transform.location,
-                                         right_wpt.transform.location)
-            elif left_turn == carla.LaneChange.Left and waypoint.lane_id * left_wpt.lane_id > 0 and left_wpt.lane_type == carla.LaneType.Driving:
-                new_vehicle_state, _, _ = self._vehicle_obstacle_detected(vehicle_list, max(
-                    self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, lane_offset=-1)
-                if not new_vehicle_state:
-                    print("Tailgating, moving to the left!")
-                    end_waypoint = self._local_planner.target_waypoint
-                    self._behavior.tailgate_counter = 200
-                    self.set_destination(end_waypoint.transform.location,
-                                         left_wpt.transform.location)
+    # Checks for obstacles from the nearby vehicles in a specified proximity and angle range
+    behind_vehicle_state, behind_vehicle, _ = self._vehicle_obstacle_detected(vehicle_list, max(
+        self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, low_angle_th=160)
+    
+    # If an obstacle is detected behind and the vehicle is slower than the one behind
+    if behind_vehicle_state and self._speed < get_speed(behind_vehicle):
+        # If lane change to the right is possible, and the right lane is suitable
+        if (right_turn == carla.LaneChange.Right or right_turn ==
+                carla.LaneChange.Both) and waypoint.lane_id * right_wpt.lane_id > 0 and right_wpt.lane_type == carla.LaneType.Driving:
+            # Check if there are no vehicles in the right lane in the proximity
+            new_vehicle_state, _, _ = self._vehicle_obstacle_detected(vehicle_list, max(
+                self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, lane_offset=1)
+            # If no vehicle is detected in the right lane
+            if not new_vehicle_state:
+                print("Tailgating, moving to the right!")  # Prints action
+                # Sets the destination to the right lane
+                end_waypoint = self._local_planner.target_waypoint
+                self._behavior.tailgate_counter = 200  # Sets tailgating counter
+                # Set destination to the right lane
+                self.set_destination(end_waypoint.transform.location,
+                                     right_wpt.transform.location)
+        # If lane change to the left is possible, and the left lane is suitable
+        elif left_turn == carla.LaneChange.Left and waypoint.lane_id * left_wpt.lane_id > 0 and left_wpt.lane_type == carla.LaneType.Driving:
+            # Check if there are no vehicles in the left lane in the proximity
+            new_vehicle_state, _, _ = self._vehicle_obstacle_detected(vehicle_list, max(
+                self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, lane_offset=-1)
+            # If no vehicle is detected in the left lane
+            if not new_vehicle_state:
+                print("Tailgating, moving to the left!")  # Prints action
+                # Sets the destination to the left lane
+                end_waypoint = self._local_planner.target_waypoint
+                self._behavior.tailgate_counter = 200  # Sets tailgating counter
+                # Set destination to the left lane
+                self.set_destination(end_waypoint.transform.location,
+                                     left_wpt.transform.location)
 
     def collision_and_car_avoid_manager(self, waypoint):
-        """
-        This module is in charge of warning in case of a collision
-        and managing possible tailgating chances.
+    """
+    This module is in charge of warning in case of a collision
+    and managing possible tailgating chances.
+    :param location: current location of the agent
+    :param waypoint: current waypoint of the agent
+    :return vehicle_state: True if there is a vehicle nearby, False if not
+    :return vehicle: nearby vehicle
+    :return distance: distance to nearby vehicle
+    """
 
-            :param location: current location of the agent
-            :param waypoint: current waypoint of the agent
-            :return vehicle_state: True if there is a vehicle nearby, False if not
-            :return vehicle: nearby vehicle
-            :return distance: distance to nearby vehicle
-        """
+    # Retrieves a list of all vehicles in the world
+    vehicle_list = self._world.get_actors().filter("*vehicle*")
+    # Calculates distance of a vehicle from the current waypoint
+    def dist(v): return v.get_location().distance(waypoint.transform.location)
+    # Filters vehicles to get only those within a 45-meter radius of the current location
+    vehicle_list = [v for v in vehicle_list if dist(v) < 45 and v.id != self._vehicle.id]
 
-        vehicle_list = self._world.get_actors().filter("*vehicle*")
-        def dist(v): return v.get_location().distance(waypoint.transform.location)
-        vehicle_list = [v for v in vehicle_list if dist(v) < 45 and v.id != self._vehicle.id]
+    # If the direction is to change lane to the left
+    if self._direction == RoadOption.CHANGELANELEFT:
+        # Checks for obstacles to the left
+        vehicle_state, vehicle, distance = self._vehicle_obstacle_detected(
+            vehicle_list, max(
+                self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, lane_offset=-1)
+    # If the direction is to change lane to the right
+    elif self._direction == RoadOption.CHANGELANERIGHT:
+        # Checks for obstacles to the right
+        vehicle_state, vehicle, distance = self._vehicle_obstacle_detected(
+            vehicle_list, max(
+                self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, lane_offset=1)
+    else:
+        # Otherwise, checks for obstacles in the current lane
+        vehicle_state, vehicle, distance = self._vehicle_obstacle_detected(
+            vehicle_list, max(
+                self._behavior.min_proximity_threshold, self._speed_limit / 3), up_angle_th=30)
 
-        if self._direction == RoadOption.CHANGELANELEFT:
-            vehicle_state, vehicle, distance = self._vehicle_obstacle_detected(
-                vehicle_list, max(
-                    self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, lane_offset=-1)
-        elif self._direction == RoadOption.CHANGELANERIGHT:
-            vehicle_state, vehicle, distance = self._vehicle_obstacle_detected(
-                vehicle_list, max(
-                    self._behavior.min_proximity_threshold, self._speed_limit / 2), up_angle_th=180, lane_offset=1)
-        else:
-            vehicle_state, vehicle, distance = self._vehicle_obstacle_detected(
-                vehicle_list, max(
-                    self._behavior.min_proximity_threshold, self._speed_limit / 3), up_angle_th=30)
+        # If no vehicle is detected and the agent is following the lane and speeding
+        # Tailgating is also not happening
+        if not vehicle_state and self._direction == RoadOption.LANEFOLLOW \
+                and not waypoint.is_junction and self._speed > 10 \
+                and self._behavior.tailgate_counter == 0:
+            # If all conditions are met, manage tailgating
+            self._tailgating(waypoint, vehicle_list)
 
-            # Check for tailgating
-            if not vehicle_state and self._direction == RoadOption.LANEFOLLOW \
-                    and not waypoint.is_junction and self._speed > 10 \
-                    and self._behavior.tailgate_counter == 0:
-                self._tailgating(waypoint, vehicle_list)
+    # Returns whether there is a vehicle nearby, the vehicle, and its distance
+    return vehicle_state, vehicle, distance
 
-        return vehicle_state, vehicle, distance
 
     def pedestrian_avoid_manager(self, waypoint):
         """
