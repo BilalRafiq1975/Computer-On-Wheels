@@ -33,5 +33,12 @@ sleep 10
 source /home/maanz-ai/carla-ros-bridge/catkin_ws/devel/setup.bash
 
 # Run ROS bridge
-roslaunch carla_ros_bridge carla_ros_bridge.launch town:=Town10UHD_opt passive:=True
+roslaunch carla_ros_bridge carla_ros_bridge.launch town:=Town10UHD_opt passive:=True &
+
+# Wait for ROS bridge to initialize
+sleep 5
+
+# Generate traffic in CARLA
+cd /home/maanz-ai/Downloads/CARLA_0.9.13/PythonAPI/examples/
+python3 generate_traffic.py -n 25
 
