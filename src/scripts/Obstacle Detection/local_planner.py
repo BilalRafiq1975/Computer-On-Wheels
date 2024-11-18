@@ -142,133 +142,139 @@ class LocalPlanner(object):
         """
         self._follow_speed_limits = value
 
-    def _compute_next_waypoints(self, k=1):
-        """
-        Add new waypoints to the trajectory queue.
+   def _compute_next_waypoints(self, k=1):
+    """
+    Add new waypoints to the trajectory queue.
 
-        :param k: how many waypoints to compute
-        :return:
-        """
-        # check we do not overflow the queue
-        available_entries = self._waypoints_queue.maxlen - len(self._waypoints_queue)
-        k = min(available_entries, k)
+    :param k: how many waypoints to compute
+    :return:
+    """
+    # Check to avoid overflowing the queue
+    available_entries = self._waypoints_queue.maxlen - len(self._waypoints_queue)
+    k = min(available_entries, k)
 
-        for _ in range(k):
-            last_waypoint = self._waypoints_queue[-1][0]
-            next_waypoints = list(last_waypoint.next(self._sampling_radius))
+    for _ in range(k):
+        # Get the last waypoint in the queue
+        last_waypoint = self._waypoints_queue[-1][0]
+        # Get the next set of waypoints at the specified sampling radius
+        next_waypoints = list(last_waypoint.next(self._sampling_radius))
 
-            if len(next_waypoints) == 0:
-                break
-            elif len(next_waypoints) == 1:
-                # only one option available ==> lanefollowing
-                next_waypoint = next_waypoints[0]
-                road_option = RoadOption.LANEFOLLOW
-            else:
-                # random choice between the possible options
-                road_options_list = _retrieve_options(
-                    next_waypoints, last_waypoint)
-                road_option = random.choice(road_options_list)
-                next_waypoint = next_waypoints[road_options_list.index(
-                    road_option)]
+        if len(next_waypoints) == 0:
+            break  # No waypoints available to follow
+        elif len(next_waypoints) == 1:
+            # If only one option, continue on the current lane
+            next_waypoint = next_waypoints[0]
+            road_option = RoadOption.LANEFOLLOW
+        else:
+            # If multiple options, randomly select a road option
+            road_options_list = _retrieve_options(next_waypoints, last_waypoint)
+            road_option = random.choice(road_options_list)
+            next_waypoint = next_waypoints[road_options_list.index(road_option)]
 
-            self._waypoints_queue.append((next_waypoint, road_option))
+        # Append the next waypoint and its road option to the queue
+        self._waypoints_queue.append((next_waypoint, road_option))
 
     def set_global_plan(self, current_plan, stop_waypoint_creation=True, clean_queue=True):
-        """
-        Adds a new plan to the local planner. A plan must be a list of [carla.Waypoint, RoadOption] pairs
-        The 'clean_queue` parameter erases the previous plan if True, otherwise, it adds it to the old one
-        The 'stop_waypoint_creation' flag stops the automatic creation of random waypoints
+    """
+    Adds a new plan to the local planner. A plan must be a list of [carla.Waypoint, RoadOption] pairs.
+    The 'clean_queue` parameter erases the previous plan if True, otherwise, it adds it to the old one.
+    The 'stop_waypoint_creation' flag stops the automatic creation of random waypoints.
 
-        :param current_plan: list of (carla.Waypoint, RoadOption)
-        :param stop_waypoint_creation: bool
-        :param clean_queue: bool
-        :return:
-        """
-        if clean_queue:
-            self._waypoints_queue.clear()
+    :param current_plan: list of (carla.Waypoint, RoadOption)
+    :param stop_waypoint_creation: bool
+    :param clean_queue: bool
+    :return:
+    """
+    if clean_queue:
+        self._waypoints_queue.clear()
 
-        # Remake the waypoints queue if the new plan has a higher length than the queue
-        new_plan_length = len(current_plan) + len(self._waypoints_queue)
-        if new_plan_length > self._waypoints_queue.maxlen:
-            new_waypoint_queue = deque(maxlen=new_plan_length)
-            for wp in self._waypoints_queue:
-                new_waypoint_queue.append(wp)
-            self._waypoints_queue = new_waypoint_queue
+    # Remake the waypoints queue if the new plan is larger
+    new_plan_length = len(current_plan) + len(self._waypoints_queue)
+    if new_plan_length > self._waypoints_queue.maxlen:
+        new_waypoint_queue = deque(maxlen=new_plan_length)
+        for wp in self._waypoints_queue:
+            new_waypoint_queue.append(wp)
+        self._waypoints_queue = new_waypoint_queue
 
-        for elem in current_plan:
-            self._waypoints_queue.append(elem)
+    for elem in current_plan:
+        self._waypoints_queue.append(elem)
 
-        self._stop_waypoint_creation = stop_waypoint_creation
+    # Stop waypoint creation if specified
+    self._stop_waypoint_creation = stop_waypoint_creation
 
-    def run_step(self, debug=False):
-        """
-        Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
-        follow the waypoints trajectory.
 
-        :param debug: boolean flag to activate waypoints debugging
-        :return: control to be applied
-        """
-        if self._follow_speed_limits:
-            self._target_speed = self._vehicle.get_speed_limit()
+   def run_step(self, debug=False):
+    """
+    Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
+    follow the waypoints trajectory.
 
-        # Add more waypoints too few in the horizon
-        if not self._stop_waypoint_creation and len(self._waypoints_queue) < self._min_waypoint_queue_length:
-            self._compute_next_waypoints(k=self._min_waypoint_queue_length)
+    :param debug: boolean flag to activate waypoints debugging
+    :return: control to be applied
+    """
+    # If following speed limits, update target speed
+    if self._follow_speed_limits:
+        self._target_speed = self._vehicle.get_speed_limit()
 
-        # Purge the queue of obsolete waypoints
-        veh_location = self._vehicle.get_location()
-        vehicle_speed = get_speed(self._vehicle) / 3.6
-        self._min_distance = self._base_min_distance + 0.5 *vehicle_speed
+    # Add more waypoints if the queue is too short
+    if not self._stop_waypoint_creation and len(self._waypoints_queue) < self._min_waypoint_queue_length:
+        self._compute_next_waypoints(k=self._min_waypoint_queue_length)
 
-        num_waypoint_removed = 0
-        for waypoint, _ in self._waypoints_queue:
+    # Purge the queue of obsolete waypoints based on vehicle's location
+    veh_location = self._vehicle.get_location()
+    vehicle_speed = get_speed(self._vehicle) / 3.6
+    self._min_distance = self._base_min_distance + 0.5 * vehicle_speed
 
-            if len(self._waypoints_queue) - num_waypoint_removed == 1:
-                min_distance = 1  # Don't remove the last waypoint until very close by
-            else:
-                min_distance = self._min_distance
-
-            if veh_location.distance(waypoint.transform.location) < min_distance:
-                num_waypoint_removed += 1
-            else:
-                break
-
-        if num_waypoint_removed > 0:
-            for _ in range(num_waypoint_removed):
-                self._waypoints_queue.popleft()
-
-        # Get the target waypoint and move using the PID controllers. Stop if no target waypoint
-        if len(self._waypoints_queue) == 0:
-            control = carla.VehicleControl()
-            control.steer = 0.0
-            control.throttle = 0.0
-            control.brake = 1.0
-            control.hand_brake = False
-            control.manual_gear_shift = False
+    num_waypoint_removed = 0
+    for waypoint, _ in self._waypoints_queue:
+        if len(self._waypoints_queue) - num_waypoint_removed == 1:
+            min_distance = 1  # Don't remove the last waypoint until very close by
         else:
-            self.target_waypoint, self.target_road_option = self._waypoints_queue[0]
-            control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint)
+            min_distance = self._min_distance
 
-        if debug:
-            draw_waypoints(self._vehicle.get_world(), [self.target_waypoint], 1.0)
-
-        return control
-
-    def get_incoming_waypoint_and_direction(self, steps=3):
-        """
-        Returns direction and waypoint at a distance ahead defined by the user.
-
-            :param steps: number of steps to get the incoming waypoint.
-        """
-        if len(self._waypoints_queue) > steps:
-            return self._waypoints_queue[steps]
-
+        if veh_location.distance(waypoint.transform.location) < min_distance:
+            num_waypoint_removed += 1
         else:
-            try:
-                wpt, direction = self._waypoints_queue[-1]
-                return wpt, direction
-            except IndexError as i:
-                return None, RoadOption.VOID
+            break
+
+    if num_waypoint_removed > 0:
+        for _ in range(num_waypoint_removed):
+            self._waypoints_queue.popleft()
+
+    # If no waypoints left, stop the vehicle
+    if len(self._waypoints_queue) == 0:
+        control = carla.VehicleControl()
+        control.steer = 0.0
+        control.throttle = 0.0
+        control.brake = 1.0
+        control.hand_brake = False
+        control.manual_gear_shift = False
+    else:
+        # Get the target waypoint and compute control
+        self.target_waypoint, self.target_road_option = self._waypoints_queue[0]
+        control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint)
+
+    # Debugging: draw waypoints
+    if debug:
+        draw_waypoints(self._vehicle.get_world(), [self.target_waypoint], 1.0)
+
+    return control
+
+
+   def get_incoming_waypoint_and_direction(self, steps=3):
+    """
+    Returns direction and waypoint at a distance ahead defined by the user.
+
+    :param steps: number of steps to get the incoming waypoint.
+    """
+    if len(self._waypoints_queue) > steps:
+        return self._waypoints_queue[steps]
+    else:
+        try:
+            wpt, direction = self._waypoints_queue[-1]
+            return wpt, direction
+        except IndexError as i:
+            return None, RoadOption.VOID
+
 
     def get_plan(self):
         """Returns the current plan of the local planner"""
