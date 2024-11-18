@@ -28,48 +28,57 @@ class GlobalRoutePlanner(object):
         self._find_loose_ends()
         self._lane_change_link()
 
-    def trace_route(self, origin, destination):
-        """
-        This method returns list of (carla.Waypoint, RoadOption)
-        from origin to destination
-        """
-        route_trace = []
-        route = self._path_search(origin, destination)
-        current_waypoint = self._wmap.get_waypoint(origin)
-        destination_waypoint = self._wmap.get_waypoint(destination)
+   def trace_route(self, origin, destination):
+    """
+    This method returns a list of (carla.Waypoint, RoadOption)
+    from origin to destination.
+    """
+    route_trace = []  # Initialize the list to store the final route trace.
+    route = self._path_search(origin, destination)  # Perform path search to get a list of graph nodes.
+    current_waypoint = self._wmap.get_waypoint(origin)  # Get the waypoint for the origin location.
+    destination_waypoint = self._wmap.get_waypoint(destination)  # Get the waypoint for the destination location.
 
-        for i in range(len(route) - 1):
-            road_option = self._turn_decision(i, route)
-            edge = self._graph.edges[route[i], route[i+1]]
-            path = []
+    for i in range(len(route) - 1):  # Iterate through the path's edges.
+        road_option = self._turn_decision(i, route)  # Determine the turn decision for the current edge.
+        edge = self._graph.edges[route[i], route[i + 1]]  # Get the graph edge corresponding to the current step.
+        path = []  # Initialize an empty path list.
 
-            if edge['type'] != RoadOption.LANEFOLLOW and edge['type'] != RoadOption.VOID:
-                route_trace.append((current_waypoint, road_option))
-                exit_wp = edge['exit_waypoint']
-                n1, n2 = self._road_id_to_edge[exit_wp.road_id][exit_wp.section_id][exit_wp.lane_id]
-                next_edge = self._graph.edges[n1, n2]
-                if next_edge['path']:
-                    closest_index = self._find_closest_in_list(current_waypoint, next_edge['path'])
-                    closest_index = min(len(next_edge['path'])-1, closest_index+5)
-                    current_waypoint = next_edge['path'][closest_index]
-                else:
-                    current_waypoint = next_edge['exit_waypoint']
-                route_trace.append((current_waypoint, road_option))
+        if edge['type'] != RoadOption.LANEFOLLOW and edge['type'] != RoadOption.VOID:
+            # For edges that are not simple lane-following or void, add the entry waypoint to the route trace.
+            route_trace.append((current_waypoint, road_option))
+            exit_wp = edge['exit_waypoint']  # Get the exit waypoint for the edge.
+            n1, n2 = self._road_id_to_edge[exit_wp.road_id][exit_wp.section_id][exit_wp.lane_id]
+            next_edge = self._graph.edges[n1, n2]  # Get the next edge in the graph.
 
+            if next_edge['path']:
+                # If there is a path in the next edge, find the closest waypoint.
+                closest_index = self._find_closest_in_list(current_waypoint, next_edge['path'])
+                closest_index = min(len(next_edge['path']) - 1, closest_index + 5)
+                current_waypoint = next_edge['path'][closest_index]  # Update the current waypoint.
             else:
-                path = path + [edge['entry_waypoint']] + edge['path'] + [edge['exit_waypoint']]
-                closest_index = self._find_closest_in_list(current_waypoint, path)
-                for waypoint in path[closest_index:]:
-                    current_waypoint = waypoint
-                    route_trace.append((current_waypoint, road_option))
-                    if len(route)-i <= 2 and waypoint.transform.location.distance(destination) < 2*self._sampling_resolution:
-                        break
-                    elif len(route)-i <= 2 and current_waypoint.road_id == destination_waypoint.road_id and current_waypoint.section_id == destination_waypoint.section_id and current_waypoint.lane_id == destination_waypoint.lane_id:
-                        destination_index = self._find_closest_in_list(destination_waypoint, path)
-                        if closest_index > destination_index:
-                            break
+                current_waypoint = next_edge['exit_waypoint']  # Use the edge's exit waypoint if no path exists.
+            route_trace.append((current_waypoint, road_option))  # Append the updated waypoint to the route trace.
 
-        return route_trace
+        else:
+            # For lane-following edges, traverse through the path points and append them to the route trace.
+            path = path + [edge['entry_waypoint']] + edge['path'] + [edge['exit_waypoint']]
+            closest_index = self._find_closest_in_list(current_waypoint, path)  # Find the closest waypoint in the path.
+            for waypoint in path[closest_index:]:  # Traverse the path from the closest waypoint.
+                current_waypoint = waypoint  # Update the current waypoint.
+                route_trace.append((current_waypoint, road_option))  # Append the waypoint to the route trace.
+                if len(route) - i <= 2 and waypoint.transform.location.distance(destination) < 2 * self._sampling_resolution:
+                    # Stop if the waypoint is close to the destination.
+                    break
+                elif len(route) - i <= 2 and current_waypoint.road_id == destination_waypoint.road_id \
+                        and current_waypoint.section_id == destination_waypoint.section_id \
+                        and current_waypoint.lane_id == destination_waypoint.lane_id:
+                    # Stop if the current waypoint matches the destination waypoint.
+                    destination_index = self._find_closest_in_list(destination_waypoint, path)
+                    if closest_index > destination_index:
+                        break
+
+    return route_trace  # Return the final route trace.
+
 
     def _build_topology(self):
         """
